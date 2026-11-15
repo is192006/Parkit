@@ -1,0 +1,47 @@
+# ParkIt application configuration.
+# Credentials are NEVER stored here: they come from environment variables
+# (see README.md and .env.example). The application fails to start if
+# PARKIT_DB_USERNAME / PARKIT_DB_PASSWORD are not provided.
+
+spring:
+  application:
+    name: parkit
+
+  datasource:
+    url: ${PARKIT_DB_URL:jdbc:postgresql://localhost:5432/parkit_db}
+    username: ${PARKIT_DB_USERNAME}
+    password: ${PARKIT_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${PARKIT_DB_POOL_SIZE:10}
+
+  jpa:
+    # Flyway owns the schema; Hibernate only validates entity mappings.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  jackson:
+    time-zone: UTC
+    serialization:
+      write-dates-as-timestamps: false
+
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${PARKIT_SERVER_PORT:8080}
+  error:
+    # Never reveal internals in error responses (SRS §4 Security).
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    include-exception: false

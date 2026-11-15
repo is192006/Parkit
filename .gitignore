@@ -1,0 +1,15 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Java build output
+**/target/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
