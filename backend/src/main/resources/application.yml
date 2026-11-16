@@ -50,6 +50,11 @@ parkit:
     name: ${PARKIT_ADMIN_NAME:Administrator}
     phone: ${PARKIT_ADMIN_PHONE:}
 
+  # Background jobs (hold-expiry sweep every 60 s). Disabled in tests, which run the sweep directly.
+  scheduler:
+    enabled: ${PARKIT_SCHEDULER_ENABLED:true}
+    hold-expiry-interval-ms: 60000
+
   # Version 1 policy constants (BUSINESS_RULES.md). Bound to PolicyProperties and
   # validated at startup. Rates and operating hours are database-managed, not here.
   policy:

@@ -35,6 +35,9 @@ public class AuditService {
     public static final String BLOCK_CANCELLED = "SLOT_BLOCK_CANCELLED";
     public static final String RATE_UPDATED = "RATE_UPDATED";
     public static final String FACILITY_SETTINGS_UPDATED = "FACILITY_SETTINGS_UPDATED";
+    public static final String ADMIN_BOOKING_CREATED = "ADMIN_BOOKING_CREATED";
+    public static final String HOLD_EXPIRED = "HOLD_EXPIRED";
+    public static final String ENTITY_BOOKING = "BOOKING";
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
@@ -50,6 +53,12 @@ public class AuditService {
                                  Map<String, Object> details) {
         auditLogRepository.save(AuditLog.byUser(userRepository.getReferenceById(actorUserId),
                 action, entityType, entityId, details));
+    }
+
+    /** Records an action performed by the system, e.g. a hold expiry (actor type SYSTEM, BR-27). */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void recordSystemAction(String action, String entityType, Long entityId, Map<String, Object> details) {
+        auditLogRepository.save(AuditLog.bySystem(action, entityType, entityId, details));
     }
 
     /**

@@ -29,7 +29,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(properties = {
         "parkit.admin.email=" + AbstractApiIntegrationTest.ADMIN_EMAIL,
         "parkit.admin.password=" + AbstractApiIntegrationTest.ADMIN_PASSWORD,
-        "parkit.admin.phone=9000000000"
+        "parkit.admin.phone=9000000000",
+        "parkit.scheduler.enabled=false"
 })
 @AutoConfigureMockMvc
 abstract class AbstractApiIntegrationTest {

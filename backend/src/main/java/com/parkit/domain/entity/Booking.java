@@ -1,6 +1,8 @@
 package com.parkit.domain.entity;
 
 import com.parkit.domain.enums.BookingStatus;
+import com.parkit.exception.HoldExpiredException;
+import com.parkit.exception.InvalidStateTransitionException;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,8 +26,10 @@ import java.time.Instant;
  * Parking booking (table {@code bookings}).
  *
  * <p>A new booking always starts as a PENDING_PAYMENT hold (BR-10). Status
- * has no public setter; state-transition behaviour (confirm, check-in, ...)
- * is added with the booking use cases in later phases.
+ * has no public setter: it changes only through the transition methods
+ * below, each checked against the {@link BookingStatus} transition table.
+ * Check-in, check-out and cancellation of confirmed bookings are added with
+ * their use cases in later phases.
  *
  * <p>The composite FK {@code (vehicle_id, user_id) -> vehicles} guarantees
  * the vehicle belongs to the customer; it is enforced by the database.
@@ -157,6 +161,76 @@ public class Booking extends BaseEntity {
         this.dailyRateSnapshot = dailyRateSnapshot;
         this.bookingAmount = bookingAmount;
         this.status = BookingStatus.PENDING_PAYMENT;
+    }
+
+    /** Cancellation reason when a customer releases their own hold (BR-10). */
+    public static final String REASON_HOLD_RELEASED = "HOLD_RELEASED";
+
+    /** True while the payment hold is still valid at {@code now} (BR-08, BR-10). */
+    public boolean isHoldActive(Instant now) {
+        return status == BookingStatus.PENDING_PAYMENT && holdExpiresAt.isAfter(now);
+    }
+
+    /**
+     * PENDING_PAYMENT to PAYMENT_EXPIRED once the hold has run out (BR-10).
+     *
+     * @throws InvalidStateTransitionException if not a hold, or the hold has not expired yet
+     */
+    public void expireHold(Instant now) {
+        requireTransition(BookingStatus.PAYMENT_EXPIRED);
+        if (holdExpiresAt.isAfter(now)) {
+            throw new InvalidStateTransitionException("The payment hold has not expired yet.");
+        }
+        this.status = BookingStatus.PAYMENT_EXPIRED;
+    }
+
+    /**
+     * The customer releases their own hold: PENDING_PAYMENT to CANCELLED with
+     * reason HOLD_RELEASED. No refund applies: nothing was paid (BR-10).
+     * {@code confirmed_at} stays null, which keeps a released hold
+     * distinguishable from a cancelled confirmed booking.
+     *
+     * @throws InvalidStateTransitionException if the booking is not a hold
+     * @throws HoldExpiredException            if the hold has already expired
+     */
+    public void releaseHold(Instant now, User releasedBy) {
+        // CONFIRMED -> CANCELLED is also a valid transition (BR-13), so the
+        // table alone is not enough: only a PENDING_PAYMENT hold can be released.
+        if (status != BookingStatus.PENDING_PAYMENT) {
+            throw new InvalidStateTransitionException(
+                    "Only a payment hold can be released; this booking is %s.".formatted(status));
+        }
+        if (!holdExpiresAt.isAfter(now)) {
+            throw new HoldExpiredException("The payment hold has already expired.");
+        }
+        this.status = BookingStatus.CANCELLED;
+        this.cancelledAt = now;
+        this.cancelledBy = releasedBy;
+        this.cancellationReason = REASON_HOLD_RELEASED;
+    }
+
+    /**
+     * PENDING_PAYMENT to CONFIRMED after a successful payment within the hold
+     * (BR-11). {@code confirmed_at} is set once and never cleared (BR-09).
+     * Invoked by the payment flow (later phase); the hold is never extended.
+     *
+     * @throws InvalidStateTransitionException if the booking is not a hold
+     * @throws HoldExpiredException            if the hold has expired
+     */
+    public void confirm(Instant now) {
+        requireTransition(BookingStatus.CONFIRMED);
+        if (!holdExpiresAt.isAfter(now)) {
+            throw new HoldExpiredException("The payment hold has expired.");
+        }
+        this.status = BookingStatus.CONFIRMED;
+        this.confirmedAt = now;
+    }
+
+    private void requireTransition(BookingStatus target) {
+        if (!status.canTransitionTo(target)) {
+            throw new InvalidStateTransitionException(
+                    "A booking in status %s cannot become %s.".formatted(status, target));
+        }
     }
 
     public String getBookingReference() {

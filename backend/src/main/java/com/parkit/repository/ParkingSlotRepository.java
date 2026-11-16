@@ -1,6 +1,7 @@
 package com.parkit.repository;
 
 import com.parkit.domain.entity.ParkingSlot;
+import com.parkit.domain.enums.VehicleType;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
@@ -32,4 +33,20 @@ public interface ParkingSlotRepository extends JpaRepository<ParkingSlot, Long> 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from ParkingSlot s where s.id = :id")
     Optional<ParkingSlot> findByIdForUpdate(@Param("id") Long id);
+
+    /**
+     * Locks every ACTIVE slot of a category in ascending slot_id order
+     * ({@code SELECT ... ORDER BY slot_id FOR UPDATE}). This serializes all
+     * allocations within the category (ARCHITECTURE.md §6 step 2); the fixed
+     * order means concurrent lockers cannot deadlock. Waits at most the
+     * configured 5 s lock_timeout.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select s from ParkingSlot s
+            where s.vehicleType = :category
+              and s.operationalStatus = com.parkit.domain.enums.SlotStatus.ACTIVE
+            order by s.id
+            """)
+    List<ParkingSlot> lockActiveByCategory(@Param("category") VehicleType category);
 }

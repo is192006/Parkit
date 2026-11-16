@@ -2,6 +2,7 @@ package com.parkit.service;
 
 import com.parkit.domain.entity.FacilitySettings;
 import com.parkit.domain.entity.ParkingRate;
+import com.parkit.domain.policy.OperatingHoursPolicy;
 import com.parkit.dto.request.FacilitySettingsUpdateRequest;
 import com.parkit.dto.response.FacilitySettingsResponse;
 import com.parkit.dto.response.PublicFacilityResponse;
@@ -78,6 +79,13 @@ public class FacilityService {
                 .toList();
         return new PublicFacilityResponse(settings.getFacilityName(), settings.getOpeningTime(),
                 settings.getClosingTime(), settings.isOpen24Hours(), settings.getTimezone(), rates);
+    }
+
+    /** Current operating hours as a policy object (BR-06.5). */
+    @Transactional(readOnly = true)
+    public OperatingHoursPolicy getOperatingHours() {
+        FacilitySettings s = load();
+        return new OperatingHoursPolicy(s.getOpeningTime(), s.getClosingTime(), s.isOpen24Hours());
     }
 
     /** Facility time zone, used to convert facility-local input and output (BR-28). */

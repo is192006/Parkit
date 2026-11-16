@@ -85,6 +85,7 @@ public class SecurityConfig {
                     .requestMatchers("/error").permitAll()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/vehicles/**").hasRole("CUSTOMER")
+                    .requestMatchers("/api/bookings/**", "/api/bookings").hasRole("CUSTOMER")
                     .anyRequest().authenticated());
         return http.build();
     }

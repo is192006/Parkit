@@ -9,6 +9,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -127,6 +128,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         log.warn("Lock acquisition failed: {}", ex.getMessage());
         return problem(HttpStatus.CONFLICT, "CONCURRENCY_CONFLICT",
                 "The resource is busy. Please retry.");
+    }
+
+    /**
+     * Optimistic-lock conflict (@Version on bookings): another transaction
+     * changed the row first, e.g. the expiry sweep -> 409 "please retry".
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ProblemDetail handleOptimisticLock(OptimisticLockingFailureException ex) {
+        log.warn("Optimistic lock conflict: {}", ex.getMessage());
+        return problem(HttpStatus.CONFLICT, "CONCURRENCY_CONFLICT",
+                "The resource was changed by another request. Please retry.");
     }
 
     /** Anything unexpected → 500 without internals; details go to the log only. */

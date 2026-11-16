@@ -6,7 +6,7 @@ facility. UCS553 Enterprise Web Application mini project.
 Design documents (Version 2.1, source of truth) are in [docs/](docs/):
 `SRS.md`, `BUSINESS_RULES.md`, `DATABASE_DESIGN.md`, `ARCHITECTURE.md`.
 
-## Current status: Phase 4 — parking management complete
+## Current status: Phase 5 — booking and slot allocation complete
 
 Implemented:
 
@@ -22,9 +22,14 @@ Implemented:
   (`/api/admin/rates`), facility settings (`/api/admin/facility-settings`), public
   facility info (`GET /api/facility`), and transactional audit logging of these actions.
 
-Not implemented yet (later phases): time and pricing policies, quote, allocation and
-holds, payments, cancellation and refunds, QR, check-in/out, reports, audit-log viewer,
-frontend.
+- **Phase 5 — booking and allocation:** time/operating-hours/pricing policies; quote
+  (`POST /api/bookings/quote`); balanced slot allocation with a 5-minute payment hold
+  (`POST /api/bookings`); hold release, current hold, history and details
+  (`/api/bookings/...`); hold-expiry sweep every 60 s; admin holds, search and lookup
+  by reference (`/api/admin/bookings`).
+
+Not implemented yet (later phases): payments and actual confirmation, cancellation and
+refunds, counter payment, QR, check-in/out, reports, audit-log viewer, frontend.
 
 ## Prerequisites
 
