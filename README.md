@@ -6,22 +6,25 @@ facility. UCS553 Enterprise Web Application mini project.
 Design documents (Version 2.1, source of truth) are in [docs/](docs/):
 `SRS.md`, `BUSINESS_RULES.md`, `DATABASE_DESIGN.md`, `ARCHITECTURE.md`.
 
-## Current status: Phase 1 — backend foundation
+## Current status: Phase 4 — parking management complete
 
 Implemented:
 
-- Java 21 / Spring Boot 3.5 / Maven project in [backend/](backend/)
-- PostgreSQL connectivity (credentials from environment variables only)
-- Spring Data JPA / Hibernate with `ddl-auto=validate` (Hibernate never changes the schema)
-- Flyway migrations: `V1__extensions.sql`, `V2__core_schema.sql` (the full schema from DATABASE_DESIGN.md §9)
-- Package structure from ARCHITECTURE.md §4
-- `ParkItException` hierarchy and `GlobalExceptionHandler` (RFC 7807 ProblemDetail, Bean Validation)
-- Health check: `GET /api/health`
-- JUnit 5, Spring Boot Test and Testcontainers tests
+- **Phase 1 — foundation:** Java 21 / Spring Boot 3.5 / Maven project in [backend/](backend/);
+  PostgreSQL (credentials from environment variables only); JPA with `ddl-auto=validate`;
+  Flyway migrations `V1`–`V3` (schema from DATABASE_DESIGN.md §9 and approved seed data);
+  `ParkItException` hierarchy with RFC 7807 ProblemDetail errors; `GET /api/health`.
+- **Phase 2 — domain:** entities, enums and repositories; injected `Clock`; `PolicyProperties`.
+- **Phase 3 — accounts:** session login with CSRF, BCrypt, first admin from environment,
+  profile and password change, customer vehicles, admin customer search.
+- **Phase 4 — parking management:** admin slots (`/api/admin/slots`), slot blocks
+  (`/api/admin/slots/{id}/blocks`, `/api/admin/blocks/{id}/cancel`), rates
+  (`/api/admin/rates`), facility settings (`/api/admin/facility-settings`), public
+  facility info (`GET /api/facility`), and transactional audit logging of these actions.
 
-Not implemented yet (later phases): entities, security/login, vehicles,
-slots, booking, payment, allocation, frontend. `V3__seed_reference_data.sql`
-waits for the facility hours and rates from the project owner.
+Not implemented yet (later phases): time and pricing policies, quote, allocation and
+holds, payments, cancellation and refunds, QR, check-in/out, reports, audit-log viewer,
+frontend.
 
 ## Prerequisites
 
@@ -55,6 +58,14 @@ The application reads its configuration from environment variables
 | `PARKIT_DB_PASSWORD` | **yes** | — |
 | `PARKIT_SERVER_PORT` | no | `8080` |
 | `PARKIT_DB_POOL_SIZE` | no | `10` |
+| `PARKIT_ADMIN_EMAIL` | first start | — |
+| `PARKIT_ADMIN_PASSWORD` | first start | — (min 8 characters, max 72 bytes) |
+| `PARKIT_ADMIN_PHONE` | first start | — |
+| `PARKIT_ADMIN_NAME` | no | `Administrator` |
+
+The first ADMIN account is created at start-up from the `PARKIT_ADMIN_*` variables
+only if no ADMIN exists yet; an existing account is never promoted. Afterwards
+the variables may be removed.
 
 PowerShell:
 

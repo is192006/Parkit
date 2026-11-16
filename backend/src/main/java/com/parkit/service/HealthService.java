@@ -23,10 +23,10 @@ public class HealthService {
     private final Flyway flyway;
     private final Clock clock;
 
-    public HealthService(JdbcTemplate jdbcTemplate, Flyway flyway) {
+    public HealthService(JdbcTemplate jdbcTemplate, Flyway flyway, Clock clock) {
         this.jdbcTemplate = jdbcTemplate;
         this.flyway = flyway;
-        this.clock = Clock.systemUTC();
+        this.clock = clock;
     }
 
     public HealthResponse check() {

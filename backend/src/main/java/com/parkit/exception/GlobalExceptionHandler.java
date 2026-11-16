@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -47,6 +49,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(ex.getStatus(), ex.getErrorCode(), ex.getMessage());
     }
 
+    /** Failed login (wrong email/password or deactivated account) -> 401, one generic message. */
+    @ExceptionHandler(AuthenticationException.class)
+    public ProblemDetail handleAuthentication(AuthenticationException ex) {
+        return problem(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid email or password.");
+    }
+
+    /** Access denied raised inside a controller or service -> 403. */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        return problem(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "You do not have permission for this operation.");
+    }
+
     /** Request-body validation failures (@Valid on DTOs) → 400 with field errors. */
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
@@ -67,6 +81,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             body.setProperty("globalErrors", globalErrors);
         }
         return ResponseEntity.badRequest().body(body);
+    }
+
+    /** Unknown sort property in a paginated request -> 400. */
+    @ExceptionHandler(org.springframework.data.mapping.PropertyReferenceException.class)
+    public ProblemDetail handleBadSortProperty(org.springframework.data.mapping.PropertyReferenceException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "INVALID_SORT", "Unknown sort property.");
     }
 
     /** Validation of path/query parameters (@Validated controllers) → 400. */

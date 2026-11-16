@@ -13,6 +13,10 @@ spring:
     password: ${PARKIT_DB_PASSWORD}
     hikari:
       maximum-pool-size: ${PARKIT_DB_POOL_SIZE:10}
+      # ARCHITECTURE.md §6: a lock wait longer than 5 s fails (SQLSTATE 55P03) and is
+      # returned as HTTP 409 "please retry" instead of blocking the request.
+      # Set per connection because Hibernate ignores JPA lock-timeout hints on PostgreSQL.
+      connection-init-sql: SET lock_timeout = '5s'
 
   jpa:
     # Flyway owns the schema; Hibernate only validates entity mappings.
@@ -37,8 +41,39 @@ spring:
     problemdetails:
       enabled: true
 
+parkit:
+  # First ADMIN, created at start-up only if no ADMIN exists (FR-04). Values come
+  # only from the environment; nothing is stored in source control.
+  admin:
+    email: ${PARKIT_ADMIN_EMAIL:}
+    password: ${PARKIT_ADMIN_PASSWORD:}
+    name: ${PARKIT_ADMIN_NAME:Administrator}
+    phone: ${PARKIT_ADMIN_PHONE:}
+
+  # Version 1 policy constants (BUSINESS_RULES.md). Bound to PolicyProperties and
+  # validated at startup. Rates and operating hours are database-managed, not here.
+  policy:
+    min-advance: 30m
+    payment-hold: 5m
+    late-arrival-grace: 15m
+    early-check-in-allowance: 30m
+    customer-cancellation-cutoff: 2h
+    time-increment: 15m
+    min-duration: 1h
+    max-duration: 7d
+    booking-horizon: 30d
+    overstay-penalty: 100.00
+    overstay-grace: 0m
+    reassignment-wait: 15m
+    max-active-holds-per-customer: 1
+
 server:
   port: ${PARKIT_SERVER_PORT:8080}
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
   error:
     # Never reveal internals in error responses (SRS §4 Security).
     include-stacktrace: never
