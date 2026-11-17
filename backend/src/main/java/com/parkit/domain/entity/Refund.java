@@ -96,6 +96,29 @@ public class Refund {
         this.initiatedBy = initiatedBy;
     }
 
+    /** PENDING to SUCCESS; sets {@code completed_at} (ck_refund_completed). */
+    public void markSuccess(String refundReference, Instant now) {
+        requirePending();
+        this.status = RefundStatus.SUCCESS;
+        this.refundReference = refundReference;
+        this.completedAt = now;
+    }
+
+    /** PENDING to FAILED with a reason; sets {@code completed_at}. */
+    public void markFailed(String reason, Instant now) {
+        requirePending();
+        this.status = RefundStatus.FAILED;
+        this.failureReason = reason;
+        this.completedAt = now;
+    }
+
+    private void requirePending() {
+        if (status != RefundStatus.PENDING) {
+            throw new com.parkit.exception.InvalidStateTransitionException(
+                    "The refund is already %s.".formatted(status));
+        }
+    }
+
     public Long getId() {
         return id;
     }

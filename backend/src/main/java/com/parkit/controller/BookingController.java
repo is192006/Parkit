@@ -2,12 +2,22 @@ package com.parkit.controller;
 
 import com.parkit.dto.request.BookingHistoryFilter;
 import com.parkit.dto.request.BookingRequest;
+import com.parkit.dto.request.CustomerCancelRequest;
+import com.parkit.dto.request.PaymentRequest;
 import com.parkit.dto.response.BookingResponse;
+import com.parkit.dto.response.CancellationResponse;
 import com.parkit.dto.response.PageResponse;
+import com.parkit.dto.response.PaymentResponse;
 import com.parkit.dto.response.QuoteResponse;
+import com.parkit.dto.response.RefundResponse;
+import com.parkit.exception.HoldExpiredException;
 import com.parkit.security.AuthenticatedUser;
 import com.parkit.service.BookingService;
+import com.parkit.service.CancellationService;
+import com.parkit.service.PaymentService;
 import jakarta.validation.Valid;
+import java.util.List;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -33,9 +43,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final PaymentService paymentService;
+    private final CancellationService cancellationService;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService, PaymentService paymentService,
+                             CancellationService cancellationService) {
         this.bookingService = bookingService;
+        this.paymentService = paymentService;
+        this.cancellationService = cancellationService;
     }
 
     @PostMapping("/quote")
@@ -73,6 +88,48 @@ public class BookingController {
     public BookingResponse get(@AuthenticationPrincipal AuthenticatedUser principal,
                                @PathVariable String reference) {
         return bookingService.getOwn(principal.getUserId(), reference);
+    }
+
+    /**
+     * Pays for the customer's own hold (FR-32 to FR-36). The amount is the stored
+     * booking amount; the body may only choose the simulated gateway outcome.
+     * 201 for a new attempt (SUCCESS or FAILED), 200 when the Idempotency-Key was
+     * already used, 410 when the hold has expired (the FAILED attempt and the
+     * PAYMENT_EXPIRED status are already committed when this method throws).
+     */
+    @PostMapping("/{reference}/payments")
+    public ResponseEntity<PaymentResponse> pay(@AuthenticationPrincipal AuthenticatedUser principal,
+                                               @PathVariable String reference,
+                                               @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
+                                               @RequestBody(required = false) PaymentRequest request) {
+        PaymentService.PaymentAttempt attempt = paymentService.payOnline(principal.getUserId(), reference,
+                idempotencyKey, request == null ? null : request.simulatedOutcome());
+        if (attempt.holdExpired()) {
+            throw new HoldExpiredException("The payment hold has expired. Please start a new booking.");
+        }
+        return ResponseEntity.status(attempt.replayed() ? HttpStatus.OK : HttpStatus.CREATED)
+                .body(attempt.payment());
+    }
+
+    @GetMapping("/{reference}/payments")
+    public List<PaymentResponse> payments(@AuthenticationPrincipal AuthenticatedUser principal,
+                                          @PathVariable String reference) {
+        return paymentService.listPayments(principal.getUserId(), reference);
+    }
+
+    @GetMapping("/{reference}/refunds")
+    public List<RefundResponse> refunds(@AuthenticationPrincipal AuthenticatedUser principal,
+                                        @PathVariable String reference) {
+        return paymentService.listRefunds(principal.getUserId(), reference);
+    }
+
+    /** Cancels a confirmed booking up to 2 hours before its start; refunds in full (BR-13). */
+    @PostMapping("/{reference}/cancel")
+    public CancellationResponse cancel(@AuthenticationPrincipal AuthenticatedUser principal,
+                                       @PathVariable String reference,
+                                       @Valid @RequestBody(required = false) CustomerCancelRequest request) {
+        return cancellationService.customerCancel(principal.getUserId(), reference,
+                request == null ? null : request.reason());
     }
 
     @PostMapping("/{reference}/release-hold")

@@ -100,6 +100,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
     @Query("select b from Booking b where b.bookingReference = :reference")
     Optional<Booking> findByReferenceForUpdate(@Param("reference") String reference);
 
+    /** Loads a booking by id with a row lock (used when only a refund id is known). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select b from Booking b where b.id = :id")
+    Optional<Booking> findByIdForUpdate(@Param("id") Long id);
+
     /**
      * Balanced allocation (BR-09, DATABASE_DESIGN.md §7): ACTIVE slots of the
      * category with no BR-08 conflict and no active block in {@code [start, end)},

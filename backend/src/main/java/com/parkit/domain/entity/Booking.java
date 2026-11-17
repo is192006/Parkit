@@ -226,6 +226,21 @@ public class Booking extends BaseEntity {
         this.confirmedAt = now;
     }
 
+    /**
+     * Cancels a PENDING_PAYMENT or CONFIRMED booking (BR-13, BR-14). The caller
+     * checks who may cancel and when, and issues any refund in the same
+     * transaction. A reason is mandatory (ck_cancelled).
+     *
+     * @throws InvalidStateTransitionException for any other status
+     */
+    public void cancel(Instant now, User cancelledBy, String reason) {
+        requireTransition(BookingStatus.CANCELLED);
+        this.status = BookingStatus.CANCELLED;
+        this.cancelledAt = now;
+        this.cancelledBy = cancelledBy;
+        this.cancellationReason = reason;
+    }
+
     private void requireTransition(BookingStatus target) {
         if (!status.canTransitionTo(target)) {
             throw new InvalidStateTransitionException(

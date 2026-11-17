@@ -38,6 +38,11 @@ public class AuditService {
     public static final String ADMIN_BOOKING_CREATED = "ADMIN_BOOKING_CREATED";
     public static final String HOLD_EXPIRED = "HOLD_EXPIRED";
     public static final String ENTITY_BOOKING = "BOOKING";
+    public static final String ENTITY_REFUND = "REFUND";
+    public static final String COUNTER_PAYMENT_RECORDED = "COUNTER_PAYMENT_RECORDED";
+    public static final String BOOKING_CANCELLED = "BOOKING_CANCELLED";
+    public static final String REFUND_ISSUED = "REFUND_ISSUED";
+    public static final String REFUND_RETRIED = "REFUND_RETRIED";
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;

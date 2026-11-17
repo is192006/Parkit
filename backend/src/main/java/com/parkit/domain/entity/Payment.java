@@ -104,6 +104,29 @@ public class Payment {
         this.recordedBy = recordedBy;
     }
 
+    /** PENDING to SUCCESS; sets {@code completed_at} (ck_payment_completed). */
+    public void markSuccess(String transactionReference, Instant now) {
+        requirePending();
+        this.status = PaymentStatus.SUCCESS;
+        this.transactionReference = transactionReference;
+        this.completedAt = now;
+    }
+
+    /** PENDING to FAILED with a reason; sets {@code completed_at}. */
+    public void markFailed(String reason, Instant now) {
+        requirePending();
+        this.status = PaymentStatus.FAILED;
+        this.failureReason = reason;
+        this.completedAt = now;
+    }
+
+    private void requirePending() {
+        if (status != PaymentStatus.PENDING) {
+            throw new com.parkit.exception.InvalidStateTransitionException(
+                    "The payment is already %s.".formatted(status));
+        }
+    }
+
     public Long getId() {
         return id;
     }
